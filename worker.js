@@ -384,10 +384,31 @@ if (
       }, 404);
     }
 
-    return jsonResponse({
-      success: true,
-      key,
-      dataUrl
+    const match = dataUrl.match(
+      /^data:image\/(png|jpeg|webp|gif);base64,([A-Za-z0-9+/=]+)$/
+    );
+
+    if (!match) {
+      return jsonResponse({
+        success: false,
+        message: "Invalid stored image"
+      }, 500);
+    }
+
+    const mime = `image/${match[1]}`;
+    const binary = atob(match[2]);
+    const bytes = Uint8Array.from(
+      binary,
+      character => character.charCodeAt(0)
+    );
+
+    return new Response(bytes, {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": mime,
+        "Cache-Control": "public, max-age=3600",
+        "X-Content-Type-Options": "nosniff"
+      }
     });
 
   } catch (error) {
