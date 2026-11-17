@@ -189,7 +189,110 @@ export default {
         }, 500);
       }
     }
+// Get Orders
+if (
+  url.pathname === "/api/admin/orders" &&
+  request.method === "GET"
+) {
+  try {
+    const result = await env.DB.prepare(
+      "SELECT * FROM orders ORDER BY id DESC"
+    ).all();
 
+    const orders = result.results.map(order => ({
+      id: order.order_code || String(order.id),
+      db_id: order.id,
+      name: order.customer_name || "",
+      phone: order.customer_phone || "",
+      email: order.customer_email || "",
+      uid: order.user_id || "",
+      gameName: order.game || "",
+      folder: order.folder || "",
+      prod: order.product_name || "",
+      quantity: order.quantity || 1,
+      price: order.price || 0,
+      bonus: order.bonus || "",
+      player: order.player_id || "",
+      zone: order.zone_id || "",
+      extra: order.extra || "",
+      telegram: order.telegram || "",
+      pay: order.payment_method || "",
+      screenshot: order.screenshot_url || "",
+      timestamp: order.order_timestamp || order.created_at,
+      status: order.status || "Pending",
+      reason: order.rejection_reason || "",
+      delivery_end: order.delivery_end || 0,
+      delivery_remaining: order.delivery_remaining || 0
+    }));
+
+    return jsonResponse({
+      success: true,
+      orders
+    });
+
+  } catch (error) {
+    return jsonResponse({
+      success: false,
+      message: "Could not load orders"
+    }, 500);
+  }
+}
+
+// Update Order
+if (
+  url.pathname === "/api/admin/orders/update" &&
+  request.method === "POST"
+) {
+  try {
+    const body = await request.json();
+
+    const allowedStatuses = [
+      "Pending",
+      "Submitted",
+      "Payment Under Review",
+      "Approved",
+      "Delivery in Progress",
+      "Delivered",
+      "Rejected"
+    ];
+
+    if (
+      !Number.isInteger(Number(body.db_id)) ||
+      !allowedStatuses.includes(body.status)
+    ) {
+      return jsonResponse({
+        success: false,
+        message: "Invalid order data"
+      }, 400);
+    }
+
+    await env.DB.prepare(`
+      UPDATE orders
+      SET status = ?,
+          rejection_reason = ?,
+          delivery_end = ?,
+          delivery_remaining = ?
+      WHERE id = ?
+    `).bind(
+      body.status,
+      body.reason || "",
+      Number(body.delivery_end) || 0,
+      Number(body.delivery_remaining) || 0,
+      Number(body.db_id)
+    ).run();
+
+    return jsonResponse({
+      success: true,
+      message: "Order updated"
+    });
+
+  } catch (error) {
+    return jsonResponse({
+      success: false,
+      message: "Could not update order"
+    }, 500);
+  }
+}
     // Other requests go to website assets
     return env.ASSETS.fetch(request);
   }
