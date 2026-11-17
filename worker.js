@@ -19,6 +19,38 @@ async function createSignature(data, password) {
   return btoa(String.fromCharCode(...new Uint8Array(signature)));
 }
 
+async function verifyToken(token, password) {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 2) return false;
+
+    const [payload, signature] = parts;
+
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(password),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+
+    const valid = await crypto.subtle.verify(
+      "HMAC",
+      key,
+      Uint8Array.from(atob(signature), c => c.charCodeAt(0)),
+      encoder.encode(payload)
+    );
+
+    if (!valid) return false;
+
+    const data = JSON.parse(atob(payload));
+    return Number.isFinite(data.expires) &&
+      data.expires > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
