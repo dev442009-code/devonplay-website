@@ -307,6 +307,96 @@ if (
     }, 500);
   }
 }
+    // Upload Website Media (Admin Only)
+if (
+  url.pathname === "/api/admin/media" &&
+  request.method === "POST"
+) {
+  try {
+    if (!env.MEDIA) {
+      return jsonResponse({
+        success: false,
+        message: "MEDIA binding missing"
+      }, 500);
+    }
+
+    const body = await request.json();
+    const key = String(body.key || "");
+    const dataUrl = String(body.dataUrl || "");
+
+    if (
+      !/^[a-zA-Z0-9_-]{1,80}$/.test(key) ||
+      !/^data:image\/(png|jpeg|webp|gif);base64,/.test(dataUrl) ||
+      dataUrl.length > 4 * 1024 * 1024
+    ) {
+      return jsonResponse({
+        success: false,
+        message: "Invalid image or image too large"
+      }, 400);
+    }
+
+    await env.MEDIA.put(`media:${key}`, dataUrl);
+
+    return jsonResponse({
+      success: true,
+      key,
+      url: `/api/media/${key}`
+    });
+
+  } catch (error) {
+    return jsonResponse({
+      success: false,
+      message: "Media upload failed"
+    }, 500);
+  }
+}
+
+// Retrieve Website Media (Public)
+if (
+  url.pathname.startsWith("/api/media/") &&
+  request.method === "GET"
+) {
+  try {
+    if (!env.MEDIA) {
+      return jsonResponse({
+        success: false,
+        message: "MEDIA binding missing"
+      }, 500);
+    }
+
+    const key = decodeURIComponent(
+      url.pathname.slice("/api/media/".length)
+    );
+
+    if (!/^[a-zA-Z0-9_-]{1,80}$/.test(key)) {
+      return jsonResponse({
+        success: false,
+        message: "Invalid media key"
+      }, 400);
+    }
+
+    const dataUrl = await env.MEDIA.get(`media:${key}`);
+
+    if (!dataUrl) {
+      return jsonResponse({
+        success: false,
+        message: "Image not found"
+      }, 404);
+    }
+
+    return jsonResponse({
+      success: true,
+      key,
+      dataUrl
+    });
+
+  } catch (error) {
+    return jsonResponse({
+      success: false,
+      message: "Media retrieval failed"
+    }, 500);
+  }
+}
     // Other requests go to website assets
     return env.ASSETS.fetch(request);
   }
