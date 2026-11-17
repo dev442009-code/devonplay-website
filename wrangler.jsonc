@@ -6,5 +6,12 @@
   "assets": {
     "directory": ".",
     "binding": "ASSETS"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "devonplay-db",
+      "database_id": "c6dd6e9e-f726-47d8-a01d-14952ac8008a"
+    }
+  ]
 }
