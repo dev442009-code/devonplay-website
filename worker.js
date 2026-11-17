@@ -104,6 +104,25 @@ export default {
       }
     }
 
+if (
+  url.pathname.startsWith("/api/admin/") &&
+  url.pathname !== "/api/admin/login"
+) {
+  const auth = request.headers.get("Authorization") || "";
+  const token = auth.startsWith("Bearer ")
+    ? auth.slice(7)
+    : "";
+
+  const valid = await verifyToken(token, env.ADMIN_PASSWORD);
+
+  if (!valid) {
+    return Response.json(
+      { success: false, message: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+}
+
     if (url.pathname === "/api/health") {
       try {
         const result = await env.DB.prepare(
