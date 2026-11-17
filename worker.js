@@ -166,29 +166,43 @@ export default {
       });
     }
 
-    // Database Health Check
-    if (
-      url.pathname === "/api/health" &&
-      request.method === "GET"
-    ) {
-      try {
-        const result = await env.DB.prepare(
-          "SELECT name FROM sqlite_master WHERE type = 'table'"
-        ).all();
+    // Database and KV Health Check
+if (
+  url.pathname === "/api/health" &&
+  request.method === "GET"
+) {
+  try {
+    const result = await env.DB.prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'table'"
+    ).all();
 
-        return jsonResponse({
-          success: true,
-          database: "Connected",
-          tables: result.results
-        });
+    let mediaStatus = "Not Connected";
 
-      } catch (error) {
-        return jsonResponse({
-          success: false,
-          error: error.message
-        }, 500);
+    try {
+      if (!env.MEDIA) {
+        throw new Error("MEDIA binding missing");
       }
+
+      await env.MEDIA.get("__devonplay_health_check__");
+      mediaStatus = "Connected";
+    } catch {
+      mediaStatus = "Not Connected";
     }
+
+    return jsonResponse({
+      success: true,
+      database: "Connected",
+      media: mediaStatus,
+      tables: result.results
+    });
+
+  } catch (error) {
+    return jsonResponse({
+      success: false,
+      error: error.message
+    }, 500);
+  }
+}
 // Get Orders
 if (
   url.pathname === "/api/admin/orders" &&
